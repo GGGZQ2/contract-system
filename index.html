@@ -175,7 +175,6 @@
             padding: 8px 16px;
             border-radius: 4px;
             cursor: pointer;
-            margin-top: 10px;
         }
 
         .progress-bar {
@@ -270,6 +269,12 @@
                 <p>服务器地址：<strong id="serverHost">192.168.1.100</strong></p>
             </div>
 
+            <!-- ⭐⭐⭐ 新增两个按钮区域 ⭐⭐⭐ -->
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <button type="button" class="file-upload-btn" id="startUploadBtn">开始上传PDF</button>
+                <button type="button" class="file-upload-btn" id="autoFillBtn" style="background-color:#2ecc71;">自动填充内容</button>
+            </div>
+
             <button type="submit" class="save-btn">保存合同信息</button>
         </form>
     </div>
@@ -277,7 +282,7 @@
     <div class="notification" id="notification">合同信息保存成功！</div>
 
     <script>
-        // 设置默认日期为今天
+        // 设置默认日期
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('deliveryDate').value = today;
 
@@ -291,207 +296,157 @@
         const progress = document.getElementById('progress');
 
         // 远程服务器配置
-        const REMOTE_DIR = '/home/user/contracts'; // 远程目录
-        const HOSTNAME = '192.168.1.100'; // 服务器地址
-        const USERNAME = 'username'; // 用户名
-        const PASSWORD = 'password'; // 密码
-        const PORT = 22; // SSH端口
+        const REMOTE_DIR = '/home/user/contracts';
+        const HOSTNAME = '192.168.1.100';
 
-        // 显示服务器信息
         document.getElementById('remoteDir').textContent = REMOTE_DIR;
         document.getElementById('serverHost').textContent = HOSTNAME;
 
-        // 点击上传按钮触发文件选择
-        fileUploadBtn.addEventListener('click', () => {
-            fileInput.click();
-        });
-
-        // 文件选择处理
+        fileUploadBtn.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', (e) => {
             handleFiles(e.target.files);
-            fileInput.value = ''; // 重置input，允许选择相同文件
+            fileInput.value = '';
         });
 
-        // 拖拽区域事件处理
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            fileUploadArea.addEventListener(eventName, preventDefaults, false);
+        // 拖拽事件
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(name => {
+            fileUploadArea.addEventListener(name, (e) => {
+                e.preventDefault(); e.stopPropagation();
+            });
         });
 
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-
-        ['dragenter', 'dragover'].forEach(eventName => {
-            fileUploadArea.addEventListener(eventName, highlight, false);
+        ['dragenter', 'dragover'].forEach(name => {
+            fileUploadArea.addEventListener(name, () => fileUploadArea.classList.add('highlight'));
         });
 
-        ['dragleave', 'drop'].forEach(eventName => {
-            fileUploadArea.addEventListener(eventName, unhighlight, false);
+        ['dragleave', 'drop'].forEach(name => {
+            fileUploadArea.addEventListener(name, () => fileUploadArea.classList.remove('highlight'));
         });
 
-        function highlight() {
-            fileUploadArea.classList.add('highlight');
-        }
-
-        function unhighlight() {
-            fileUploadArea.classList.remove('highlight');
-        }
-
-        // 处理拖放的文件
         fileUploadArea.addEventListener('drop', (e) => {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            handleFiles(files);
+            handleFiles(e.dataTransfer.files);
         });
 
-        // 处理文件上传
         function handleFiles(files) {
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-
-                // 检查文件类型
+            for (let file of files) {
                 if (file.type !== 'application/pdf') {
-                    showNotification('只能上传PDF文件！', true);
+                    showNotification("只能上传PDF文件！", true);
                     continue;
                 }
-
-                // 检查文件大小（限制为10MB）
                 if (file.size > 10 * 1024 * 1024) {
-                    showNotification('文件大小不能超过10MB！', true);
+                    showNotification("文件不能超过10MB！", true);
                     continue;
                 }
-
-                // 添加到已上传文件列表
                 uploadedFiles.push(file);
-                renderFileList();
             }
+            renderFileList();
         }
 
-        // 渲染文件列表
         function renderFileList() {
             fileList.innerHTML = '';
-
             uploadedFiles.forEach((file, index) => {
-                const fileItem = document.createElement('div');
-                fileItem.className = 'file-item';
-
-                fileItem.innerHTML = `
+                const item = document.createElement('div');
+                item.className = 'file-item';
+                item.innerHTML = `
                     <div class="file-name">${file.name}</div>
                     <div class="file-remove" data-index="${index}">删除</div>
                 `;
-
-                fileList.appendChild(fileItem);
+                fileList.appendChild(item);
             });
 
-            // 添加删除事件监听
-            document.querySelectorAll('.file-remove').forEach(removeBtn => {
-                removeBtn.addEventListener('click', (e) => {
-                    const index = parseInt(e.target.getAttribute('data-index'));
-                    uploadedFiles.splice(index, 1);
+            document.querySelectorAll('.file-remove').forEach(btn => {
+                btn.addEventListener('click', e => {
+                    uploadedFiles.splice(parseInt(e.target.dataset.index), 1);
                     renderFileList();
                 });
             });
         }
 
-        // 显示通知
-        function showNotification(message, isError = false) {
-            const notification = document.getElementById('notification');
-            notification.textContent = message;
-            notification.className = isError ? 'notification error' : 'notification';
-            notification.classList.add('show');
-
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 3000);
+        function showNotification(msg, isError = false) {
+            const n = document.getElementById('notification');
+            n.textContent = msg;
+            n.className = isError ? "notification error" : "notification";
+            n.classList.add('show');
+            setTimeout(() => n.classList.remove('show'), 3000);
         }
 
-        // 模拟文件上传到远程服务器
+        // 模拟上传
         function uploadFileToRemoteServer(file) {
-            return new Promise((resolve, reject) => {
-                // 显示进度条
+            return new Promise(resolve => {
                 progressBar.style.display = 'block';
                 progress.style.width = '0%';
 
-                // 模拟上传进度
-                let progressValue = 0;
-                const progressInterval = setInterval(() => {
-                    progressValue += Math.random() * 10;
-                    if (progressValue >= 100) {
-                        progressValue = 100;
-                        clearInterval(progressInterval);
+                let v = 0;
+                const itv = setInterval(() => {
+                    v += Math.random() * 10;
+                    if (v >= 100) {
+                        v = 100;
+                        clearInterval(itv);
                         progress.style.width = '100%';
-
-                        // 模拟上传完成
                         setTimeout(() => {
                             resolve({
                                 success: true,
-                                message: `文件 ${file.name} 已成功上传到远程服务器 ${HOSTNAME}:${REMOTE_DIR}`
+                                message: `文件 ${file.name} 已上传到 ${HOSTNAME}:${REMOTE_DIR}`
                             });
-                        }, 500);
+                        }, 300);
                     } else {
-                        progress.style.width = `${progressValue}%`;
+                        progress.style.width = v + '%';
                     }
-                }, 200);
+                }, 180);
             });
         }
 
-        // 表单提交处理
+        // ✔ 按钮 ①：开始上传 PDF
+        document.getElementById('startUploadBtn').addEventListener('click', async function () {
+            if (uploadedFiles.length === 0) {
+                showNotification("请先选择或拖入 PDF 文件！", true);
+                return;
+            }
+
+            showNotification("正在上传 PDF ...");
+
+            for (const file of uploadedFiles) {
+                const result = await uploadFileToRemoteServer(file);
+                console.log(result.message);
+            }
+
+            progressBar.style.display = 'none';
+            showNotification(`${uploadedFiles.length} 个 PDF 上传完成！`);
+        });
+
+        // ✔ 按钮 ②：自动填充
+        document.getElementById('autoFillBtn').addEventListener('click', function () {
+            document.getElementById('contractNumber').value = "HT-" + Date.now();
+            document.getElementById('companyName').value = "示例科技有限公司";
+            document.getElementById('deliveryDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('contractAmount').value = "188000";
+            document.getElementById('contactPerson').value = "张三";
+            document.getElementById('contactPhone').value = "13812345678";
+
+            showNotification("自动填写完成！");
+        });
+
+        // 表单提交（保持原逻辑）
         document.getElementById('contractForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
-            // 获取表单数据
-            const contractData = {
+            const data = {
                 contractNumber: document.getElementById('contractNumber').value,
                 companyName: document.getElementById('companyName').value,
                 deliveryDate: document.getElementById('deliveryDate').value,
                 contractAmount: document.getElementById('contractAmount').value,
                 contactPerson: document.getElementById('contactPerson').value,
                 contactPhone: document.getElementById('contactPhone').value,
-                files: uploadedFiles.map(file => file.name)
+                files: uploadedFiles.map(f => f.name)
             };
 
-            // 验证必填字段
-            if (!contractData.contractNumber || !contractData.companyName || !contractData.deliveryDate) {
-                showNotification('请填写所有必填字段！', true);
+            if (!data.contractNumber || !data.companyName || !data.deliveryDate) {
+                showNotification("请填写所有必填字段！", true);
                 return;
             }
 
-            // 在实际应用中，这里应该发送数据到服务器
-            console.log('合同数据:', contractData);
-
-            try {
-                // 上传文件到远程服务器
-                if (uploadedFiles.length > 0) {
-                    console.log('开始上传文件到远程服务器...');
-
-                    for (const file of uploadedFiles) {
-                        console.log(`上传文件: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
-
-                        // 模拟上传到远程服务器
-                        const result = await uploadFileToRemoteServer(file);
-                        console.log(result.message);
-                    }
-
-                    // 隐藏进度条
-                    setTimeout(() => {
-                        progressBar.style.display = 'none';
-                    }, 1000);
-
-                    // 显示成功消息
-                    showNotification(`合同信息及${uploadedFiles.length}个文件保存成功！`);
-                } else {
-                    showNotification('合同信息保存成功！');
-                }
-
-                // 在实际应用中，这里可以添加表单重置或页面跳转逻辑
-                // this.reset();
-                // uploadedFiles = [];
-                // renderFileList();
-            } catch (error) {
-                console.error('上传失败:', error);
-                showNotification('文件上传失败，请重试！', true);
-            }
+            console.log("合同信息：", data);
+            showNotification("合同信息保存成功！");
         });
     </script>
 </body>

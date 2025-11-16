@@ -11,14 +11,14 @@
             box-sizing: border-box;
             font-family: 'Microsoft YaHei', Arial, sans-serif;
         }
-        
+
         body {
             background-color: #f5f7fa;
             color: #333;
             line-height: 1.6;
             padding: 20px;
         }
-        
+
         .container {
             max-width: 800px;
             margin: 0 auto;
@@ -29,30 +29,30 @@
             position: relative;
             min-height: 500px;
         }
-        
+
         header {
             text-align: center;
             margin-bottom: 30px;
             padding-bottom: 15px;
             border-bottom: 1px solid #eaeaea;
         }
-        
+
         h1 {
             color: #2c3e50;
             font-size: 24px;
         }
-        
+
         .form-group {
             margin-bottom: 20px;
         }
-        
+
         label {
             display: block;
             margin-bottom: 8px;
             font-weight: bold;
             color: #555;
         }
-        
+
         input[type="text"],
         input[type="date"] {
             width: 100%;
@@ -62,14 +62,14 @@
             font-size: 16px;
             transition: border-color 0.3s;
         }
-        
+
         input[type="text"]:focus,
         input[type="date"]:focus {
             border-color: #3498db;
             outline: none;
             box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
         }
-        
+
         .save-btn {
             background-color: #3498db;
             color: white;
@@ -415,16 +415,30 @@
         });
 
         // ✔ 按钮 ②：自动填充
-        document.getElementById('autoFillBtn').addEventListener('click', function () {
-            document.getElementById('contractNumber').value = "HT-" + Date.now();
-            document.getElementById('companyName').value = "示例科技有限公司";
-            document.getElementById('deliveryDate').value = new Date().toISOString().split('T')[0];
-            document.getElementById('contractAmount').value = "188000";
-            document.getElementById('contactPerson').value = "张三";
-            document.getElementById('contactPhone').value = "13812345678";
+        document.getElementById("autoFillBtn").addEventListener("click", async function () {
 
-            showNotification("自动填写完成！");
-        });
+             // ① 通知 Node.js 启动 python_backend.py
+            await fetch("http://127.0.0.1:5000/trigger_python");
+
+             // ② 等 Python 启动好（1 秒）
+            await new Promise(r => setTimeout(r, 1000));
+
+            // ③ 获取 Python 数据
+            const res = await fetch("http://127.0.0.1:5001/get_data");
+            const data = await res.json();
+
+            // ④ 动画填写
+            for (let id in data) {
+                let el = document.getElementById(id);
+                el.value = "";
+            for (let c of data[id]) {
+                el.value += c;
+                await new Promise(r => setTimeout(r, 80));
+           }
+       }
+
+       showNotification("自动填充完成！", false);
+    });
 
         // 表单提交（保持原逻辑）
         document.getElementById('contractForm').addEventListener('submit', async function(e) {
@@ -451,3 +465,4 @@
     </script>
 </body>
 </html>
+
